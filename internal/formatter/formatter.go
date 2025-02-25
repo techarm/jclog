@@ -9,7 +9,7 @@ import (
 )
 
 // Level color mapping
-var levelColors = map[string]func(a ...interface{}) string{
+var levelColors = map[string]func(a ...any) string{
 	"DEBUG": color.New(color.FgCyan).SprintFunc(),
 	"INFO":  color.New(color.FgBlue).SprintFunc(),
 	"WARN":  color.New(color.FgYellow).SprintFunc(),
@@ -31,7 +31,7 @@ func FormatLog(entry types.LogEntry, format string, extraFields map[string]strin
 	result = strings.ReplaceAll(result, "{level}", paddedLevel)
 	result = strings.ReplaceAll(result, "{message}", entry.Message)
 
-	// Replace additional fields
+	// Replace additional fields, including extracted message fields
 	for key, value := range extraFields {
 		placeholder := "{" + key + "}"
 		result = strings.ReplaceAll(result, placeholder, value)
