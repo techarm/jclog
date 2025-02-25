@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/techarm/json-log-viewer/internal/formatter"
-	"github.com/techarm/json-log-viewer/internal/types"
+	"github.com/techarm/jclog/internal/formatter"
+	"github.com/techarm/jclog/internal/types"
 )
 
 // FieldAliases defines field name aliases for better flexibility

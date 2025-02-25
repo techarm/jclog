@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/techarm/json-log-viewer/cmd"
+	"github.com/techarm/jclog/cmd"
 )
 
 func main() {

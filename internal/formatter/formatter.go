@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/techarm/json-log-viewer/internal/types"
+	"github.com/techarm/jclog/internal/types"
 )
 
 // Level color mapping

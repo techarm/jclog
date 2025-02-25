@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/techarm/json-log-viewer/internal/logparser"
+	"github.com/techarm/jclog/internal/logparser"
 	"github.com/urfave/cli/v3"
 )
 

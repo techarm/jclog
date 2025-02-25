@@ -1,4 +1,4 @@
-module github.com/techarm/json-log-viewer
+module github.com/techarm/jclog
 
 go 1.22.5
 
