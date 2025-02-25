@@ -13,7 +13,7 @@ import (
 // NewRootCommand defines the CLI root command
 func NewRootCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "logview",
+		Name:  "jclog",
 		Usage: "Parse JSON log files and display them with colors",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -30,6 +30,9 @@ func NewRootCommand() *cli.Command {
 				Usage: "Maximum depth for JSON parsing inside message field",
 				Value: 2, // Default depth is 2
 			},
+		},
+		Commands: []*cli.Command{
+			NewVersionCommand(),
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			var scanner *bufio.Scanner
