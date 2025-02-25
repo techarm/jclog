@@ -25,6 +25,11 @@ func NewRootCommand() *cli.Command {
 				Name:  "fields",
 				Usage: "Additional JSON fields to display (e.g., --fields=service,user)",
 			},
+			&cli.IntFlag{
+				Name:  "max-depth",
+				Usage: "Maximum depth for JSON parsing inside message field",
+				Value: 2, // Default depth is 2
+			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			var scanner *bufio.Scanner
@@ -46,9 +51,10 @@ func NewRootCommand() *cli.Command {
 			// Get parameters
 			format := cmd.String("format")
 			fields := cmd.StringSlice("fields")
+			maxDepth := cmd.Int("max-depth")
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, fields)
+			logparser.ProcessLog(scanner, format, fields, maxDepth)
 			return nil
 		},
 	}
