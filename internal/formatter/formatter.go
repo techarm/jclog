@@ -1,6 +1,7 @@
 package formatter
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -15,11 +16,19 @@ var levelColors = map[string]func(a ...interface{}) string{
 	"ERROR": color.New(color.FgRed).SprintFunc(),
 }
 
+// padLevel ensures the log level is always 5 characters long
+func padLevel(level string) string {
+	return fmt.Sprintf("%-5s", level) // Left-aligned padding with spaces
+}
+
 // FormatLog applies formatting and color to log entries
 func FormatLog(entry types.LogEntry, format string, extraFields map[string]string) string {
+	// Pad the log level
+	paddedLevel := padLevel(entry.Level)
+
 	// Replace placeholders
 	result := strings.ReplaceAll(format, "{timestamp}", entry.Timestamp)
-	result = strings.ReplaceAll(result, "{level}", entry.Level)
+	result = strings.ReplaceAll(result, "{level}", paddedLevel)
 	result = strings.ReplaceAll(result, "{message}", entry.Message)
 
 	// Replace additional fields
@@ -30,7 +39,7 @@ func FormatLog(entry types.LogEntry, format string, extraFields map[string]strin
 
 	// Apply color to level
 	if colorFunc, exists := levelColors[entry.Level]; exists {
-		result = strings.ReplaceAll(result, entry.Level, colorFunc(entry.Level))
+		result = strings.ReplaceAll(result, paddedLevel, colorFunc(paddedLevel))
 	}
 	return result
 }
