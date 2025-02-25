@@ -10,8 +10,8 @@ import (
 
 // Level color mapping
 var levelColors = map[string]func(a ...any) string{
-	"DEBUG": color.New(color.FgCyan).SprintFunc(),
-	"INFO":  color.New(color.FgBlue).SprintFunc(),
+	"DEBUG": color.New(color.FgHiBlack).SprintFunc(),
+	"INFO":  color.New(color.FgGreen).SprintFunc(),
 	"WARN":  color.New(color.FgYellow).SprintFunc(),
 	"ERROR": color.New(color.FgRed).SprintFunc(),
 }
@@ -37,9 +37,9 @@ func FormatLog(entry types.LogEntry, format string, extraFields map[string]strin
 		result = strings.ReplaceAll(result, placeholder, value)
 	}
 
-	// Apply color to level
+	// Apply color to the entire log line
 	if colorFunc, exists := levelColors[entry.Level]; exists {
-		result = strings.ReplaceAll(result, paddedLevel, colorFunc(paddedLevel))
+		return colorFunc(result) // Apply color to the whole line
 	}
-	return result
+	return result // Return uncolored line if no level match
 }
