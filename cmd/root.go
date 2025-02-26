@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/techarm/jclog/internal/logparser"
 	"github.com/urfave/cli/v3"
@@ -34,6 +35,14 @@ func NewRootCommand() *cli.Command {
 				Usage: "Hide missing fields when --format is specified",
 				Value: false,
 			},
+			&cli.StringSliceFlag{
+				Name:  "filter",
+				Usage: "Only show logs that match the specified field=value conditions (e.g., --filter=level=INFO)",
+			},
+			&cli.StringSliceFlag{
+				Name:  "exclude",
+				Usage: "Hide logs that match the specified field=value conditions (e.g., --exclude=level=DEBUG)",
+			},
 		},
 		Commands: []*cli.Command{
 			NewVersionCommand(),
@@ -60,10 +69,26 @@ func NewRootCommand() *cli.Command {
 			fields := cmd.StringSlice("fields")
 			maxDepth := cmd.Int("max-depth")
 			hideMissing := cmd.Bool("hide-missing")
+			filters := parseFilterArgs(cmd.StringSlice("filter"))
+			excludes := parseFilterArgs(cmd.StringSlice("exclude"))
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, fields, maxDepth, hideMissing)
+			fmt.Println(filters)
+			fmt.Println(excludes)
+			logparser.ProcessLog(scanner, format, fields, maxDepth, hideMissing, filters, excludes)
 			return nil
 		},
 	}
+}
+
+// parseFilterArgs converts "key=value" strings into a map
+func parseFilterArgs(args []string) map[string]string {
+	filters := make(map[string]string)
+	for _, arg := range args {
+		parts := strings.SplitN(arg, "=", 2)
+		if len(parts) == 2 {
+			filters[parts[0]] = parts[1]
+		}
+	}
+	return filters
 }

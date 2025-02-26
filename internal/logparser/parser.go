@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/techarm/jclog/internal/formatter"
 )
@@ -19,7 +20,7 @@ var FieldAliases = map[string][]string{
 var defaultFields = []string{"timestamp", "level", "message"}
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64, hideMissing bool) {
+func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64, hideMissing bool, filters map[string]string, excludes map[string]string) {
 	// If no --fields is provided, use default fields
 	if len(fields) == 0 {
 		fields = defaultFields
@@ -44,10 +45,20 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 			messageFields := make(map[string]string)
 			flattenJSONString(msg, "message", messageFields, maxDepth, 1)
 			for k, v := range messageFields {
-				if contains(fields, k) { // Only add if it's in the --fields list
+				if slices.Contains(fields, k) { // Only add if it's in the --fields list
 					extractedFields[k] = v
 				}
 			}
+		}
+
+		// Apply filters (only show matching logs)
+		if len(filters) > 0 && !matchFilters(extractedFields, filters) {
+			continue
+		}
+
+		// Apply excludes (hide matching logs)
+		if len(excludes) > 0 && matchFilters(extractedFields, excludes) {
+			continue
 		}
 
 		fmt.Println(formatter.FormatLog(extractedFields, format, fields, hideMissing))
@@ -109,12 +120,15 @@ func getFieldValue(data map[string]any, field string) string {
 	return ""
 }
 
-// contains checks if a slice contains a given string
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
+// matchFilters checks if all filter conditions are met
+func matchFilters(fields map[string]string, filters map[string]string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	for key, expectedValue := range filters {
+		if actualValue, exists := fields[key]; !exists || actualValue != expectedValue {
+			return false
 		}
 	}
-	return false
+	return true
 }
