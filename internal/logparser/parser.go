@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/techarm/jclog/internal/formatter"
-	"github.com/techarm/jclog/internal/types"
 )
 
 // FieldAliases defines field name aliases for better flexibility
@@ -17,40 +15,42 @@ var FieldAliases = map[string][]string{
 	"message":   {"message", "msg"},
 }
 
+// Default fields when --fields is not specified
+var defaultFields = []string{"timestamp", "level", "message"}
+
 // ProcessLog parses JSON logs and outputs formatted results
 func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64) {
-	for scanner.Scan() {
-		var entry types.LogEntry
-		extraFields := make(map[string]string)
+	// If no --fields is provided, use default fields
+	if len(fields) == 0 {
+		fields = defaultFields
+	}
 
+	for scanner.Scan() {
+		// Parse the log line as JSON
 		raw := make(map[string]any)
 		if err := json.Unmarshal([]byte(scanner.Text()), &raw); err != nil {
-			// fmt.Println("Invalid JSON:", scanner.Text())
-			fmt.Println(scanner.Text())
+			fmt.Println("Invalid JSON:", scanner.Text())
 			continue
 		}
 
-		// Extract log level (case insensitive)
-		entry.Timestamp = getFieldValue(raw, "timestamp")
-		entry.Level = getFieldValue(raw, "level")
-		entry.Level = strings.ToUpper(entry.Level) // Normalize log level
+		// Extract only the fields that are specified in --fields
+		extractedFields := make(map[string]string)
+		for _, field := range fields {
+			extractedFields[field] = getFieldValue(raw, field)
+		}
 
-		// Extract message field (either "message" or "msg")
-		entry.Message = getFieldValue(raw, "message")
-		if entry.Message != "" {
+		// Handle nested message fields dynamically
+		if msg, exists := extractedFields["message"]; exists && msg != "" {
 			messageFields := make(map[string]string)
-			flattenJSONString(entry.Message, "message", messageFields, maxDepth, 1)
+			flattenJSONString(msg, "message", messageFields, maxDepth, 1)
 			for k, v := range messageFields {
-				extraFields[k] = v
+				if contains(fields, k) { // Only add if it's in the --fields list
+					extractedFields[k] = v
+				}
 			}
 		}
 
-		// Extract additional fields specified by --fields
-		for _, field := range fields {
-			extraFields[field] = getFieldValue(raw, field)
-		}
-
-		fmt.Println(formatter.FormatLog(entry, format, extraFields))
+		fmt.Println(formatter.FormatLog(extractedFields, format, fields))
 	}
 }
 
@@ -107,4 +107,14 @@ func getFieldValue(data map[string]any, field string) string {
 		}
 	}
 	return ""
+}
+
+// contains checks if a slice contains a given string
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
