@@ -15,7 +15,7 @@ var levelColors = map[string]func(a ...any) string{
 }
 
 // FormatLog dynamically applies formatting and color to log entries
-func FormatLog(fields map[string]string, format string, fieldOrder []string) string {
+func FormatLog(fields map[string]string, format string, fieldOrder []string, hideMissing bool) string {
 	// If --fields is specified but no --format, construct a space-separated output
 	if format == "" {
 		values := []string{}
@@ -41,6 +41,8 @@ func FormatLog(fields map[string]string, format string, fieldOrder []string) str
 		placeholder := "{" + field + "}"
 		if val, exists := fields[field]; exists {
 			result = strings.ReplaceAll(result, placeholder, val)
+		} else if hideMissing {
+			result = strings.ReplaceAll(result, placeholder, "") // Remove missing fields
 		}
 	}
 

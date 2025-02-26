@@ -19,7 +19,7 @@ var FieldAliases = map[string][]string{
 var defaultFields = []string{"timestamp", "level", "message"}
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64) {
+func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64, hideMissing bool) {
 	// If no --fields is provided, use default fields
 	if len(fields) == 0 {
 		fields = defaultFields
@@ -50,7 +50,7 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 			}
 		}
 
-		fmt.Println(formatter.FormatLog(extractedFields, format, fields))
+		fmt.Println(formatter.FormatLog(extractedFields, format, fields, hideMissing))
 	}
 }
 

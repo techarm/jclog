@@ -19,7 +19,6 @@ func NewRootCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:  "format",
 				Usage: "Specify output format (e.g., \"{timestamp} [{level}] {message}\")",
-				Value: "{timestamp} [{level}] {message}",
 			},
 			&cli.StringSliceFlag{
 				Name:  "fields",
@@ -29,6 +28,11 @@ func NewRootCommand() *cli.Command {
 				Name:  "max-depth",
 				Usage: "Maximum depth for JSON parsing inside message field",
 				Value: 2, // Default depth is 2
+			},
+			&cli.BoolFlag{
+				Name:  "hide-missing",
+				Usage: "Hide missing fields when --format is specified",
+				Value: false,
 			},
 		},
 		Commands: []*cli.Command{
@@ -55,9 +59,10 @@ func NewRootCommand() *cli.Command {
 			format := cmd.String("format")
 			fields := cmd.StringSlice("fields")
 			maxDepth := cmd.Int("max-depth")
+			hideMissing := cmd.Bool("hide-missing")
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, fields, maxDepth)
+			logparser.ProcessLog(scanner, format, fields, maxDepth, hideMissing)
 			return nil
 		},
 	}
