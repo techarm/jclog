@@ -73,8 +73,6 @@ func NewRootCommand() *cli.Command {
 			excludes := parseFilterArgs(cmd.StringSlice("exclude"))
 
 			// Process logs
-			fmt.Println(filters)
-			fmt.Println(excludes)
 			logparser.ProcessLog(scanner, format, fields, maxDepth, hideMissing, filters, excludes)
 			return nil
 		},
