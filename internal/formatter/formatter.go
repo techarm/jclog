@@ -40,10 +40,21 @@ func FormatLog(fields map[string]string, format string, fieldOrder []string, hid
 	result := format
 	for _, field := range fieldOrder {
 		placeholder := "{" + field + "}"
-		if val, exists := fields[field]; exists {
+		val, exists := fields[field]
+		if !exists || val == "" {
+			if hideMissing {
+				// Remove the placeholder and any surrounding brackets
+				result = strings.ReplaceAll(result, "["+placeholder+"]", "")
+				result = strings.ReplaceAll(result, placeholder, "")
+				// Clean up any extra spaces
+				result = strings.ReplaceAll(result, "  ", " ")
+				result = strings.TrimSpace(result)
+			} else {
+				// Keep the brackets but remove the placeholder
+				result = strings.ReplaceAll(result, placeholder, "")
+			}
+		} else {
 			result = strings.ReplaceAll(result, placeholder, val)
-		} else if hideMissing {
-			result = strings.ReplaceAll(result, placeholder, "") // Remove missing fields
 		}
 	}
 

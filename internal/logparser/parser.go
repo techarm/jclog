@@ -68,7 +68,8 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 // flattenJSONString tries to decode nested JSON strings recursively
 func flattenJSONString(jsonStr string, prefix string, result map[string]string, maxDepth int, currentDepth int) {
 	if currentDepth > maxDepth {
-		return // Stop if max depth is reached
+		result[prefix] = jsonStr // Store as a string if max depth is reached
+		return
 	}
 
 	// Try to parse the string as JSON
@@ -80,17 +81,38 @@ func flattenJSONString(jsonStr string, prefix string, result map[string]string, 
 
 	// Recursively flatten the JSON object
 	for key, val := range parsedJSON {
-		newKey := fmt.Sprintf("%s.%s", prefix, key)
+		newKey := prefix
+		if prefix != "" {
+			newKey = prefix + "." + key
+		} else {
+			newKey = key
+		}
+
 		switch v := val.(type) {
 		case string:
-			flattenJSONString(v, newKey, result, maxDepth, currentDepth+1) // Recursively parse if it's an escaped JSON string
+			// Try to parse the string value as JSON
+			if _, err := tryParseJSON(v); err == nil {
+				flattenJSONString(v, newKey, result, maxDepth, currentDepth+1)
+			} else {
+				result[newKey] = v
+			}
 		case float64:
 			result[newKey] = fmt.Sprintf("%.0f", v)
+		case bool:
+			result[newKey] = fmt.Sprintf("%v", v)
 		case map[string]any:
-			nestedJSON, err := json.Marshal(v)
-			if err == nil {
-				flattenJSONString(string(nestedJSON), newKey, result, maxDepth, currentDepth+1)
+			if currentDepth < maxDepth {
+				for k, v := range v {
+					flattenJSONString(fmt.Sprintf("%v", v), newKey+"."+k, result, maxDepth, currentDepth+1)
+				}
+			} else {
+				jsonBytes, _ := json.Marshal(v)
+				result[newKey] = string(jsonBytes)
 			}
+		case nil:
+			result[newKey] = ""
+		default:
+			result[newKey] = fmt.Sprintf("%v", v)
 		}
 	}
 }
