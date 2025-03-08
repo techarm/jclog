@@ -19,17 +19,19 @@ func TestProcessLog(t *testing.T) {
 		excludes         map[string]string
 		levelMappings    map[string]string
 		autoConvertLevel bool
+		timeFormat       string
 		wantOutput       bool
 	}{
 		{
 			name:             "Basic JSON log",
-			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			input:            `{"timestamp": "2024-03-20T10:00:00Z", "level": "INFO", "message": "test message"}`,
 			format:           "{timestamp} [{level}] {message}",
 			maxDepth:         2,
 			filters:          map[string]string{},
 			excludes:         map[string]string{},
 			levelMappings:    nil,
 			autoConvertLevel: false,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       true,
 		},
 		{
@@ -41,44 +43,48 @@ func TestProcessLog(t *testing.T) {
 			excludes:         map[string]string{},
 			levelMappings:    nil,
 			autoConvertLevel: false,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       true, // will output error message
 		},
 		{
 			name:             "Log with filter",
-			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			input:            `{"timestamp": "2024-03-20T10:00:00Z", "level": "INFO", "message": "test message"}`,
 			format:           "{timestamp} [{level}] {message}",
 			maxDepth:         2,
 			filters:          map[string]string{"level": "INFO"},
 			excludes:         map[string]string{},
 			levelMappings:    nil,
 			autoConvertLevel: false,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       true,
 		},
 		{
 			name:             "Log with exclude",
-			input:            `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
+			input:            `{"timestamp": "2024-03-20T10:00:00Z", "level": "DEBUG", "message": "test message"}`,
 			format:           "{timestamp} [{level}] {message}",
 			maxDepth:         2,
 			filters:          map[string]string{},
 			excludes:         map[string]string{"level": "DEBUG"},
 			levelMappings:    nil,
 			autoConvertLevel: false,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       false,
 		},
 		{
 			name:             "Nested message",
-			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
+			input:            `{"timestamp": "2024-03-20T10:00:00Z", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
 			format:           "{timestamp} [{level}] {message.nested}",
 			maxDepth:         2,
 			filters:          map[string]string{},
 			excludes:         map[string]string{},
 			levelMappings:    nil,
 			autoConvertLevel: false,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       true,
 		},
 		{
 			name:     "Bunyan log with level mapping",
-			input:    `{"time": "2024-03-20", "level": 30, "msg": "test message"}`,
+			input:    `{"time": "2024-03-20T10:00:00Z", "level": 30, "msg": "test message"}`,
 			format:   "{time} [{level}] {msg}",
 			maxDepth: 2,
 			filters:  map[string]string{},
@@ -89,6 +95,7 @@ func TestProcessLog(t *testing.T) {
 				"50": "ERROR",
 			},
 			autoConvertLevel: true,
+			timeFormat:       "2006-01-02 15:04:05",
 			wantOutput:       true,
 		},
 	}
@@ -111,7 +118,7 @@ func TestProcessLog(t *testing.T) {
 			// Process log
 			reader := strings.NewReader(tt.input)
 			scanner := bufio.NewScanner(reader)
-			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes, tt.levelMappings, tt.autoConvertLevel)
+			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes, tt.levelMappings, tt.autoConvertLevel, tt.timeFormat)
 
 			// Close write end of pipe and read output
 			w.Close()

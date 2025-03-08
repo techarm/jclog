@@ -26,6 +26,9 @@ var fieldPattern = regexp.MustCompile(`{([^}]+)}`)
 
 // ProcessLog parses JSON logs and outputs formatted results
 func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string, autoConvertLevel bool, timeFormat string) {
+	// Get local timezone
+	localLoc := time.Local
+
 	// Extract fields from format string
 	fields := extractFields(format)
 
@@ -62,10 +65,29 @@ func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing
 			if modifier == "basename" && fieldName == "file" {
 				value = filepath.Base(value)
 			}
-			// Format time fields
+			// Format time fields with timezone conversion
 			if (fieldName == "time" || fieldName == "timestamp") && timeFormat != "" {
 				if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
+					// Convert to local timezone
+					t = t.In(localLoc)
 					value = t.Format(timeFormat)
+				} else {
+					// Try parsing other common formats
+					formats := []string{
+						time.RFC3339,
+						"2006-01-02T15:04:05Z",
+						"2006-01-02T15:04:05.000Z",
+						"2006-01-02 15:04:05",
+						"2006-01-02 15:04:05.000",
+					}
+					for _, f := range formats {
+						if t, err := time.Parse(f, value); err == nil {
+							// Convert to local timezone
+							t = t.In(localLoc)
+							value = t.Format(timeFormat)
+							break
+						}
+					}
 				}
 			}
 			extractedFields[field] = value
