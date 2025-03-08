@@ -20,7 +20,7 @@ var FieldAliases = map[string][]string{
 var defaultFields = []string{"timestamp", "level", "message"}
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int64, hideMissing bool, filters map[string]string, excludes map[string]string) {
+func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string) {
 	// If no --fields is provided, use default fields
 	if len(fields) == 0 {
 		fields = defaultFields
@@ -66,7 +66,7 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 }
 
 // flattenJSONString tries to decode nested JSON strings recursively
-func flattenJSONString(jsonStr string, prefix string, result map[string]string, maxDepth int64, currentDepth int64) {
+func flattenJSONString(jsonStr string, prefix string, result map[string]string, maxDepth int, currentDepth int) {
 	if currentDepth > maxDepth {
 		return // Stop if max depth is reached
 	}

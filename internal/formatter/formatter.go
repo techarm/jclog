@@ -8,6 +8,7 @@ import (
 
 // Level color mapping
 var levelColors = map[string]func(a ...any) string{
+	"TRACE": color.New(color.FgHiWhite).SprintFunc(),
 	"DEBUG": color.New(color.FgHiBlack).SprintFunc(),
 	"INFO":  color.New(color.FgGreen).SprintFunc(),
 	"WARN":  color.New(color.FgYellow).SprintFunc(),
