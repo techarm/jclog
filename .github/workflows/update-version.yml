@@ -9,20 +9,30 @@ jobs:
   update-version:
     name: Update Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          
+      - name: Create Branch
+        run: |
+          git checkout -b version-update-${{ github.ref_name }}
           
       - name: Update version.go
         run: |
           VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           sed -i "s/const VERSION = \".*\"/const VERSION = \"$VERSION\"/" cmd/version.go
           
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add cmd/version.go
-          git commit -m "chore: update version to ${{ github.ref_name }}"
-          git push origin main
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update version to ${{ github.ref_name }}"
+          title: "Update version to ${{ github.ref_name }}"
+          body: "Automated version update for release ${{ github.ref_name }}"
+          branch: version-update-${{ github.ref_name }}
+          base: main
+          delete-branch: true
