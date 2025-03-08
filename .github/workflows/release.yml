@@ -26,7 +26,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: "latest"
           binary_name: "jclog"
           extra_files: LICENSE README.md
           compress_assets: auto
