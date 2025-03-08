@@ -1,0 +1,59 @@
+name: Release with Version Update
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  update-version:
+    name: Update Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Update version.go
+        run: |
+          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          sed -i "s/const VERSION = \".*\"/const VERSION = \"$VERSION\"/" cmd/version.go
+          
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add cmd/version.go
+          git commit -m "chore: update version to ${{ github.ref_name }}"
+          git push
+
+  build-and-release:
+    needs: update-version
+    name: Build and Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: Pull latest changes
+        run: git pull origin main
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          binary_name: "jclog"
+          extra_files: LICENSE README.md
+          compress_assets: auto
+          md5sum: false
+          sha256sum: true

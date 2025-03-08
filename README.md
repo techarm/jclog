@@ -203,17 +203,6 @@ When using fields that don't exist in the log:
    2024-03-20T10:00:00Z [INFO]
    ```
 
-### Creating Custom Templates
-
-You can save your frequently used formats as templates:
-
-```bash
-# Save current format as template
-jclog template save myformat "{timestamp} [{level}] {message} (user={user})"
-
-# Use custom template
-jclog --template myformat app.log
-```
 
 ## Common Use Cases
 
