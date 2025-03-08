@@ -13,6 +13,7 @@ A powerful command-line tool for viewing and formatting JSON log files. Supports
 - 🔧 Configuration file management with multiple profiles
 - 🌲 Nested JSON parsing support
 - 📦 Support for major logging frameworks
+- 🕒 Timezone-aware time formatting
 
 ## Installation
 
@@ -99,18 +100,18 @@ jclog --profile prod app.log
 
 ## Output Examples
 
-Default Configuration:
+Default Configuration (with local timezone):
 ```
-2024-03-20T10:00:00Z [INFO] Server is starting
-2024-03-20T10:00:00Z [ERROR] Failed to connect to database
-2024-03-20T10:00:00Z [DEBUG] Cache hit ratio: 0.95
+2024-03-20 19:00:00 [INFO] Server is starting
+2024-03-20 19:00:01 [ERROR] Failed to connect to database
+2024-03-20 19:00:02 [DEBUG] Cache hit ratio: 0.95
 ```
 
-Custom Format:
+Custom Time Format:
 ```
-[2024-03-20 10:00:00] INFO  - Server is starting (service: api)
-[2024-03-20 10:00:00] ERROR - Failed to connect to database (error: timeout)
-[2024-03-20 10:00:00] DEBUG - Cache hit ratio: 0.95 (cache: users)
+[19:00:00] INFO  - Server is starting (service: api)
+[19:00:01] ERROR - Failed to connect to database (error: timeout)
+[19:00:02] DEBUG - Cache hit ratio: 0.95 (cache: users)
 ```
 
 ## Advanced Features
@@ -178,26 +179,6 @@ Available Fields:
 └── service
     └── Type: string
     └── Example: "api"
-```
-
-### Format Templates
-
-Built-in format templates for common use cases:
-
-```bash
-# List available templates
-jclog template list
-
-# Available Templates:
-# - basic:     "{timestamp} [{level}] {message}"
-# - detailed:  "{timestamp} [{level}] {message} (service={service})"
-# - compact:   "[{level}] {message}"
-# - debug:     "{timestamp} [{level}] {message} (file={caller}:{line})"
-# - json:      "{timestamp} [{level}] {message} {data}"
-# - metrics:   "{timestamp} {service} CPU:{cpu_usage}% MEM:{memory_usage}%"
-
-# Use template
-jclog --template basic app.log
 ```
 
 ### Handling Unknown Fields
@@ -295,7 +276,8 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
   "maxDepth": 3,
   "hideMissing": false,
   "filters": [],
-  "excludes": []
+  "excludes": [],
+  "timeFormat": "2006-01-02 15:04:05.000"
 }
 ```
 
@@ -307,7 +289,8 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
   "maxDepth": 2,
   "hideMissing": true,
   "filters": ["level=ERROR", "level=WARN"],
-  "excludes": ["level=DEBUG"]
+  "excludes": ["level=DEBUG"],
+  "timeFormat": "2006-01-02T15:04:05.000Z"
 }
 ```
 
@@ -319,7 +302,8 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
   "maxDepth": 1,
   "hideMissing": true,
   "filters": ["type=audit"],
-  "excludes": []
+  "excludes": [],
+  "timeFormat": "Jan 02 15:04:05"
 }
 ```
 
@@ -331,7 +315,8 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
   "maxDepth": 1,
   "hideMissing": false,
   "filters": [],
-  "excludes": []
+  "excludes": [],
+  "timeFormat": "15:04:05"
 }
 ```
 
@@ -345,31 +330,92 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
       "maxDepth": 3,
       "hideMissing": false,
       "filters": [],
-      "excludes": []
+      "excludes": [],
+      "timeFormat": "2006-01-02 15:04:05.000",
+      "autoConvertLevel": true,
+      "levelMappings": {
+        "10": "TRACE",
+        "20": "DEBUG",
+        "30": "INFO",
+        "40": "WARN",
+        "50": "ERROR",
+        "60": "FATAL"
+      }
     },
     "prod": {
       "format": "{timestamp} [{level}] {message} (service={service})",
       "maxDepth": 2,
       "hideMissing": true,
       "filters": ["level=ERROR", "level=WARN"],
-      "excludes": ["level=DEBUG"]
+      "excludes": ["level=DEBUG"],
+      "timeFormat": "2006-01-02T15:04:05.000Z",
+      "autoConvertLevel": true
     },
     "audit": {
       "format": "{timestamp} - User:{user} Action:{action} Resource:{resource}",
       "maxDepth": 1,
       "hideMissing": true,
       "filters": ["type=audit"],
-      "excludes": []
+      "excludes": [],
+      "timeFormat": "Jan 02 15:04:05"
     },
     "metrics": {
       "format": "{timestamp} {service} - CPU:{cpu_usage}% MEM:{memory_usage}% DISK:{disk_usage}%",
       "maxDepth": 1,
       "hideMissing": false,
       "filters": [],
-      "excludes": []
+      "excludes": [],
+      "timeFormat": "15:04:05"
     }
   }
 }
+```
+
+## Time Format Examples
+
+The tool supports various time formats and automatically converts timestamps to the local timezone. You can customize the time format in your configuration file using Go's time format layout:
+
+```json
+{
+  "timeFormat": "2006-01-02 15:04:05.000"  // Full datetime with milliseconds
+  "timeFormat": "2006-01-02T15:04:05Z"     // RFC3339 format
+  "timeFormat": "Jan 02 15:04:05"          // Month name format
+  "timeFormat": "15:04:05"                 // Time only
+}
+```
+
+Common Format Patterns:
+- `2006` - Year (4 digits)
+- `01` - Month (2 digits)
+- `02` - Day (2 digits)
+- `15` - Hour (24-hour format)
+- `04` - Minute
+- `05` - Second
+- `.000` - Milliseconds
+- `Z07:00` - Timezone offset
+
+The tool automatically handles various input time formats:
+- RFC3339 (`2006-01-02T15:04:05Z`)
+- RFC3339Nano (`2006-01-02T15:04:05.999999999Z`)
+- ISO8601 (`2006-01-02T15:04:05`)
+- Common datetime (`2006-01-02 15:04:05`)
+
+All timestamps are automatically converted to your local timezone for display.
+
+## Output Examples
+
+Default Configuration (with local timezone):
+```
+2024-03-20 19:00:00 [INFO] Server is starting
+2024-03-20 19:00:01 [ERROR] Failed to connect to database
+2024-03-20 19:00:02 [DEBUG] Cache hit ratio: 0.95
+```
+
+Custom Time Format:
+```
+[19:00:00] INFO  - Server is starting (service: api)
+[19:00:01] ERROR - Failed to connect to database (error: timeout)
+[19:00:02] DEBUG - Cache hit ratio: 0.95 (cache: users)
 ```
 
 ## Contributing
