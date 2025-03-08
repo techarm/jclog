@@ -4,27 +4,28 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/techarm/jclog/internal/formatter"
 )
 
 // FieldAliases defines field name aliases for better flexibility
 var FieldAliases = map[string][]string{
-	"timestamp": {"timestamp", "time"},
-	"level":     {"level", "lvl"},
-	"message":   {"message", "msg"},
+	"timestamp": {"timestamp", "time", "ts"},
+	"level":     {"level", "lvl", "severity"},
+	"message":   {"message", "msg", "text"},
 }
 
-// Default fields when --fields is not specified
-var defaultFields = []string{"timestamp", "level", "message"}
+// Pattern for extracting field names from format string
+var fieldPattern = regexp.MustCompile(`{([^}]+)}`)
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string) {
-	// If no --fields is provided, use default fields
-	if len(fields) == 0 {
-		fields = defaultFields
-	}
+func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string) {
+	// Extract fields from format string
+	fields := extractFields(format)
 
 	for scanner.Scan() {
 		// Parse the log line as JSON
@@ -34,7 +35,7 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 			continue
 		}
 
-		// Extract only the fields that are specified in --fields
+		// Extract fields
 		extractedFields := make(map[string]string)
 		for _, field := range fields {
 			extractedFields[field] = getFieldValue(raw, field)
@@ -45,7 +46,7 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 			messageFields := make(map[string]string)
 			flattenJSONString(msg, "message", messageFields, maxDepth, 1)
 			for k, v := range messageFields {
-				if slices.Contains(fields, k) { // Only add if it's in the --fields list
+				if slices.Contains(fields, k) {
 					extractedFields[k] = v
 				}
 			}
@@ -61,8 +62,60 @@ func ProcessLog(scanner *bufio.Scanner, format string, fields []string, maxDepth
 			continue
 		}
 
-		fmt.Println(formatter.FormatLog(extractedFields, format, fields, hideMissing))
+		// Format output with unknown field handling
+		output := format
+		for _, field := range fields {
+			value := extractedFields[field]
+			placeholder := "{" + field + "}"
+
+			if value == "" {
+				if hideMissing {
+					// Remove the placeholder and any surrounding brackets
+					output = removeFieldAndBrackets(output, field)
+				} else {
+					// Mark unknown field in gray with warning symbol
+					unknownValue := color.New(color.FgHiBlack).Sprintf("❓%s", field)
+					output = strings.Replace(output, placeholder, unknownValue, -1)
+				}
+			} else {
+				output = strings.Replace(output, placeholder, value, -1)
+			}
+		}
+
+		// Apply color based on log level
+		if level, exists := extractedFields["level"]; exists {
+			output = formatter.ColorizeByLevel(output, level)
+		}
+
+		fmt.Println(output)
 	}
+}
+
+// extractFields extracts field names from format string
+func extractFields(format string) []string {
+	matches := fieldPattern.FindAllStringSubmatch(format, -1)
+	fields := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) > 1 {
+			fields = append(fields, match[1])
+		}
+	}
+	return fields
+}
+
+// removeFieldAndBrackets removes a field placeholder and its surrounding brackets
+func removeFieldAndBrackets(format, field string) string {
+	// Remove [field] pattern
+	bracketPattern := regexp.MustCompile(`\[[^]]*{` + field + `}[^]]*\]`)
+	format = bracketPattern.ReplaceAllString(format, "")
+
+	// Remove field pattern
+	fieldPattern := regexp.MustCompile(`{` + field + `}`)
+	format = fieldPattern.ReplaceAllString(format, "")
+
+	// Clean up extra spaces
+	format = strings.ReplaceAll(format, "  ", " ")
+	return strings.TrimSpace(format)
 }
 
 // flattenJSONString tries to decode nested JSON strings recursively

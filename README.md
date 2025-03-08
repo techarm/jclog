@@ -142,14 +142,96 @@ Custom Format:
 jclog [options] [file]
 
 Options:
-  --config string       Path to config file (default: ~/.jclog.json)
+  --config string      Path to config file (default: ~/.jclog.json)
   --profile string     Configuration profile to use
-  --format string      Output format template
-  --fields strings     Fields to display
+  --format string      Format template for output display
+  --template string    Use predefined format template
   --max-depth int      Maximum JSON parsing depth (default: 2)
-  --hide-missing       Hide missing fields in format
+  --hide-missing       Hide missing or unknown fields in format
   --filter strings     Filter conditions (field=value)
   --exclude strings    Exclude conditions (field=value)
+
+Commands:
+  inspect             Analyze log file and show available fields
+  template            Manage format templates
+```
+
+### Field Inspection
+
+Use the `inspect` command to analyze log files and discover available fields:
+
+```bash
+# Show available fields in a log file
+jclog inspect app.log
+
+# Output example:
+Available Fields:
+├── timestamp (alias: time)
+│   └── Type: string
+│   └── Example: "2024-03-20T10:00:00Z"
+├── level (alias: lvl)
+│   └── Type: string
+│   └── Example: "INFO"
+├── message (alias: msg)
+│   └── Type: string
+│   └── Example: "Server is starting"
+└── service
+    └── Type: string
+    └── Example: "api"
+```
+
+### Format Templates
+
+Built-in format templates for common use cases:
+
+```bash
+# List available templates
+jclog template list
+
+# Available Templates:
+# - basic:     "{timestamp} [{level}] {message}"
+# - detailed:  "{timestamp} [{level}] {message} (service={service})"
+# - compact:   "[{level}] {message}"
+# - debug:     "{timestamp} [{level}] {message} (file={caller}:{line})"
+# - json:      "{timestamp} [{level}] {message} {data}"
+# - metrics:   "{timestamp} {service} CPU:{cpu_usage}% MEM:{memory_usage}%"
+
+# Use template
+jclog --template basic app.log
+```
+
+### Handling Unknown Fields
+
+When using fields that don't exist in the log:
+
+1. Default behavior (--hide-missing=false):
+   ```bash
+   # Format string
+   jclog --format "{timestamp} [{level}] User:{unknown_field}"
+   
+   # Output (unknown field in gray with ❓)
+   2024-03-20T10:00:00Z [INFO] User:❓unknown_field
+   ```
+
+2. Hide missing fields (--hide-missing=true):
+   ```bash
+   # Format string
+   jclog --format "{timestamp} [{level}] User:{unknown_field}"
+   
+   # Output (unknown field removed)
+   2024-03-20T10:00:00Z [INFO]
+   ```
+
+### Creating Custom Templates
+
+You can save your frequently used formats as templates:
+
+```bash
+# Save current format as template
+jclog template save myformat "{timestamp} [{level}] {message} (user={user})"
+
+# Use custom template
+jclog --template myformat app.log
 ```
 
 ## Common Use Cases
@@ -210,7 +292,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
 {
   "name": "dev",
   "format": "[{timestamp}] {level} {message}",
-  "fields": ["timestamp", "level", "message", "caller"],
   "maxDepth": 3,
   "hideMissing": false,
   "filters": [],
@@ -223,7 +304,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
 {
   "name": "prod",
   "format": "{timestamp} [{level}] {message} (service={service})",
-  "fields": ["timestamp", "level", "message", "service", "request_id"],
   "maxDepth": 2,
   "hideMissing": true,
   "filters": ["level=ERROR", "level=WARN"],
@@ -236,7 +316,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
 {
   "name": "audit",
   "format": "{timestamp} - User:{user} Action:{action} Resource:{resource}",
-  "fields": ["timestamp", "user", "action", "resource", "ip_address"],
   "maxDepth": 1,
   "hideMissing": true,
   "filters": ["type=audit"],
@@ -249,7 +328,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
 {
   "name": "metrics",
   "format": "{timestamp} {service} - CPU:{cpu_usage}% MEM:{memory_usage}% DISK:{disk_usage}%",
-  "fields": ["timestamp", "service", "cpu_usage", "memory_usage", "disk_usage"],
   "maxDepth": 1,
   "hideMissing": false,
   "filters": [],
@@ -264,7 +342,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
   "profiles": {
     "dev": {
       "format": "[{timestamp}] {level} {message}",
-      "fields": ["timestamp", "level", "message", "caller"],
       "maxDepth": 3,
       "hideMissing": false,
       "filters": [],
@@ -272,7 +349,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
     },
     "prod": {
       "format": "{timestamp} [{level}] {message} (service={service})",
-      "fields": ["timestamp", "level", "message", "service", "request_id"],
       "maxDepth": 2,
       "hideMissing": true,
       "filters": ["level=ERROR", "level=WARN"],
@@ -280,7 +356,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
     },
     "audit": {
       "format": "{timestamp} - User:{user} Action:{action} Resource:{resource}",
-      "fields": ["timestamp", "user", "action", "resource", "ip_address"],
       "maxDepth": 1,
       "hideMissing": true,
       "filters": ["type=audit"],
@@ -288,7 +363,6 @@ jclog --filter "action=permission_change" --fields timestamp,user,resource,old_p
     },
     "metrics": {
       "format": "{timestamp} {service} - CPU:{cpu_usage}% MEM:{memory_usage}% DISK:{disk_usage}%",
-      "fields": ["timestamp", "service", "cpu_usage", "memory_usage", "disk_usage"],
       "maxDepth": 1,
       "hideMissing": false,
       "filters": [],

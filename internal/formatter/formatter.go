@@ -15,6 +15,15 @@ var levelColors = map[string]func(a ...any) string{
 	"ERROR": color.New(color.FgRed).SprintFunc(),
 }
 
+// ColorizeByLevel applies color to text based on log level
+func ColorizeByLevel(text, level string) string {
+	level = strings.ToUpper(level)
+	if colorFunc, exists := levelColors[level]; exists {
+		return colorFunc(text)
+	}
+	return text
+}
+
 // FormatLog dynamically applies formatting and color to log entries
 func FormatLog(fields map[string]string, format string, fieldOrder []string, hideMissing bool) string {
 	// If --fields is specified but no --format, construct a space-separated output

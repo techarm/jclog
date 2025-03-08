@@ -10,16 +10,10 @@ import (
 )
 
 func TestProcessLog(t *testing.T) {
-	// Capture stdout
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
 	tests := []struct {
 		name       string
 		input      string
 		format     string
-		fields     []string
 		maxDepth   int
 		filters    map[string]string
 		excludes   map[string]string
@@ -28,8 +22,7 @@ func TestProcessLog(t *testing.T) {
 		{
 			name:       "Basic JSON log",
 			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:     "",
-			fields:     []string{},
+			format:     "{timestamp} [{level}] {message}",
 			maxDepth:   2,
 			filters:    map[string]string{},
 			excludes:   map[string]string{},
@@ -38,8 +31,7 @@ func TestProcessLog(t *testing.T) {
 		{
 			name:       "Invalid JSON",
 			input:      "invalid json",
-			format:     "",
-			fields:     []string{},
+			format:     "{timestamp} [{level}] {message}",
 			maxDepth:   2,
 			filters:    map[string]string{},
 			excludes:   map[string]string{},
@@ -48,8 +40,7 @@ func TestProcessLog(t *testing.T) {
 		{
 			name:       "Log with filter",
 			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:     "",
-			fields:     []string{},
+			format:     "{timestamp} [{level}] {message}",
 			maxDepth:   2,
 			filters:    map[string]string{"level": "INFO"},
 			excludes:   map[string]string{},
@@ -58,8 +49,7 @@ func TestProcessLog(t *testing.T) {
 		{
 			name:       "Log with exclude",
 			input:      `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
-			format:     "",
-			fields:     []string{},
+			format:     "{timestamp} [{level}] {message}",
 			maxDepth:   2,
 			filters:    map[string]string{},
 			excludes:   map[string]string{"level": "DEBUG"},
@@ -68,8 +58,7 @@ func TestProcessLog(t *testing.T) {
 		{
 			name:       "Nested message",
 			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
-			format:     "",
-			fields:     []string{"message.nested"},
+			format:     "{timestamp} [{level}] {message.nested}",
 			maxDepth:   2,
 			filters:    map[string]string{},
 			excludes:   map[string]string{},
@@ -79,7 +68,17 @@ func TestProcessLog(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset output buffer
+			// Save original stdout
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// Process log
+			reader := strings.NewReader(tt.input)
+			scanner := bufio.NewScanner(reader)
+			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes)
+
+			// Copy output in background
 			outC := make(chan string)
 			go func() {
 				var buf bytes.Buffer
@@ -87,11 +86,13 @@ func TestProcessLog(t *testing.T) {
 				outC <- buf.String()
 			}()
 
-			reader := strings.NewReader(tt.input)
-			scanner := bufio.NewScanner(reader)
-			ProcessLog(scanner, tt.format, tt.fields, tt.maxDepth, false, tt.filters, tt.excludes)
-
+			// Close write end of pipe
 			w.Close()
+
+			// Restore stdout
+			os.Stdout = oldStdout
+
+			// Read output
 			out := <-outC
 
 			if tt.wantOutput && out == "" {
@@ -99,17 +100,8 @@ func TestProcessLog(t *testing.T) {
 			} else if !tt.wantOutput && out != "" {
 				t.Errorf("Expected no output but got: %s", out)
 			}
-
-			// Reset stdout for next test
-			os.Stdout = old
-			r, w, _ = os.Pipe()
-			os.Stdout = w
 		})
 	}
-
-	// Cleanup
-	w.Close()
-	os.Stdout = old
 }
 
 func TestFlattenJSONString(t *testing.T) {

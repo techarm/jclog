@@ -12,6 +12,16 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// Predefined format templates
+var builtinTemplates = map[string]string{
+	"basic":    "{timestamp} [{level}] {message}",
+	"detailed": "{timestamp} [{level}] {message} (service={service})",
+	"compact":  "[{level}] {message}",
+	"debug":    "{timestamp} [{level}] {message} (file={caller}:{line})",
+	"json":     "{timestamp} [{level}] {message} {data}",
+	"metrics":  "{timestamp} {service} CPU:{cpu_usage}% MEM:{memory_usage}%",
+}
+
 // NewRootCommand defines the CLI root command
 func NewRootCommand() *cli.Command {
 	return &cli.Command{
@@ -30,14 +40,14 @@ func NewRootCommand() *cli.Command {
 				Name:  "format",
 				Usage: "Specify output format (e.g., \"{timestamp} [{level}] {message}\")",
 			},
-			&cli.StringSliceFlag{
-				Name:  "fields",
-				Usage: "Additional JSON fields to display (e.g., --fields=service,user)",
+			&cli.StringFlag{
+				Name:  "template",
+				Usage: "Use predefined format template",
 			},
 			&cli.IntFlag{
 				Name:  "max-depth",
 				Usage: "Maximum depth for JSON parsing inside message field",
-				Value: 2, // Default depth is 2
+				Value: 2,
 			},
 			&cli.BoolFlag{
 				Name:  "hide-missing",
@@ -46,16 +56,18 @@ func NewRootCommand() *cli.Command {
 			},
 			&cli.StringSliceFlag{
 				Name:  "filter",
-				Usage: "Only show logs that match the specified field=value conditions (e.g., --filter=level=INFO)",
+				Usage: "Only show logs that match the specified field=value conditions",
 			},
 			&cli.StringSliceFlag{
 				Name:  "exclude",
-				Usage: "Hide logs that match the specified field=value conditions (e.g., --exclude=level=DEBUG)",
+				Usage: "Hide logs that match the specified field=value conditions",
 			},
 		},
 		Commands: []*cli.Command{
 			NewVersionCommand(),
 			NewConfigCommand(),
+			NewInspectCommand(),
+			NewTemplateCommand(),
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			// Load configuration
@@ -75,15 +87,20 @@ func NewRootCommand() *cli.Command {
 			}
 			activeProfile := cfg.GetActiveProfile()
 
-			// Command line arguments take precedence over config file
+			// Get format from template or format flag
 			format := cmd.String("format")
+			if template := cmd.String("template"); template != "" {
+				if tmpl, ok := builtinTemplates[template]; ok {
+					format = tmpl
+				} else {
+					return fmt.Errorf("unknown template: %s", template)
+				}
+			}
 			if format == "" {
 				format = activeProfile.Format
 			}
-
-			fields := cmd.StringSlice("fields")
-			if len(fields) == 0 {
-				fields = activeProfile.Fields
+			if format == "" {
+				format = builtinTemplates["basic"] // Use default template
 			}
 
 			maxDepth := int(cmd.Int("max-depth"))
@@ -123,7 +140,7 @@ func NewRootCommand() *cli.Command {
 			}
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, fields, maxDepth, hideMissing, filters, excludes)
+			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes)
 			return nil
 		},
 	}
