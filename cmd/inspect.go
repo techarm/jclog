@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -24,6 +25,52 @@ var defaultFieldOrder = []string{
 // Suggested fields for common use cases
 var suggestedFields = []string{
 	"time", "level", "http_code", "http_method", "uri", "file", "line", "message", "error",
+}
+
+type fieldInfo struct {
+	Type    string
+	Example string
+	Order   int
+}
+
+// orderedJSON represents a JSON object with ordered fields
+type orderedJSON struct {
+	fields     map[string]any
+	fieldOrder []string
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (o *orderedJSON) UnmarshalJSON(data []byte) error {
+	// First, get the field order by decoding tokens
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	// Read the opening brace
+	if _, err := dec.Token(); err != nil {
+		return err
+	}
+
+	o.fields = make(map[string]any)
+	o.fieldOrder = make([]string, 0)
+
+	// Read field names in order
+	for dec.More() {
+		token, err := dec.Token()
+		if err != nil {
+			return err
+		}
+
+		key := token.(string)
+		o.fieldOrder = append(o.fieldOrder, key)
+
+		// Skip the value for now
+		var value any
+		if err := dec.Decode(&value); err != nil {
+			return err
+		}
+		o.fields[key] = value
+	}
+
+	return nil
 }
 
 // NewInspectCommand creates a new inspect command
@@ -56,15 +103,16 @@ func NewInspectCommand() *cli.Command {
 				return fmt.Errorf("empty log file")
 			}
 
-			// Parse JSON
-			var data map[string]any
-			if err := json.Unmarshal([]byte(scanner.Text()), &data); err != nil {
+			// Parse JSON with field order preservation
+			var orderedData orderedJSON
+			if err := json.Unmarshal([]byte(scanner.Text()), &orderedData); err != nil {
 				return fmt.Errorf("invalid JSON: %v", err)
 			}
 
-			// Get all fields
+			// Get all fields with their original order
 			fields := make(map[string]fieldInfo)
-			for key, value := range data {
+			for i, key := range orderedData.fieldOrder {
+				value := orderedData.fields[key]
 				example := fmt.Sprintf("%v", value)
 				if cmd.Bool("basename") && key == "file" {
 					example = filepath.Base(example)
@@ -72,6 +120,7 @@ func NewInspectCommand() *cli.Command {
 				fields[key] = fieldInfo{
 					Type:    fmt.Sprintf("%T", value),
 					Example: example,
+					Order:   i,
 				}
 			}
 
@@ -88,56 +137,68 @@ func NewInspectCommand() *cli.Command {
 	}
 }
 
-type fieldInfo struct {
-	Type    string
-	Example string
-}
-
 func printFields(fields map[string]fieldInfo) {
-	// Get sorted field names
-	keys := make([]string, 0, len(fields))
-	for k := range fields {
-		keys = append(keys, k)
+	// Get field names in original order
+	type fieldWithName struct {
+		name string
+		info fieldInfo
 	}
-	sort.Strings(keys)
+	orderedFields := make([]fieldWithName, 0, len(fields))
+	for name, info := range fields {
+		orderedFields = append(orderedFields, fieldWithName{name, info})
+	}
+	sort.Slice(orderedFields, func(i, j int) bool {
+		return orderedFields[i].info.Order < orderedFields[j].info.Order
+	})
 
 	// Print field information
-	for i, key := range keys {
-		info := fields[key]
+	for i, field := range orderedFields {
 		prefix := "├──"
-		if i == len(keys)-1 {
+		if i == len(orderedFields)-1 {
 			prefix = "└──"
 		}
 
 		// Check for aliases
-		aliases := getAliases(key)
+		aliases := getAliases(field.name)
 		aliasStr := ""
 		if len(aliases) > 0 {
 			aliasStr = fmt.Sprintf(" (alias: %s)", strings.Join(aliases, ", "))
 		}
 
 		// Print field name and aliases
-		fmt.Printf("%s %s%s\n", prefix, color.BlueString(key), aliasStr)
+		fmt.Printf("%s %s%s\n", prefix, color.BlueString(field.name), aliasStr)
 
 		// Print type and example value
 		valuePrefix := "│   └──"
-		if i == len(keys)-1 {
+		if i == len(orderedFields)-1 {
 			valuePrefix = "    └──"
 		}
-		fmt.Printf("%s Type: %s\n", valuePrefix, info.Type)
-		fmt.Printf("%s Example: %s\n", valuePrefix, color.YellowString("%q", info.Example))
+		fmt.Printf("%s Type: %s\n", valuePrefix, field.info.Type)
+		fmt.Printf("%s Example: %s\n", valuePrefix, color.YellowString("%q", field.info.Example))
 	}
 }
 
 func printSuggestedFormats(fields map[string]fieldInfo, useBasename bool) {
-	// 1. Show all fields in alphabetical order
-	keys := make([]string, 0, len(fields))
-	for k := range fields {
-		keys = append(keys, k)
+	// 1. Show all fields in original order
+	type fieldWithName struct {
+		name string
+		info fieldInfo
 	}
-	sort.Strings(keys)
+	orderedFields := make([]fieldWithName, 0, len(fields))
+	for name, info := range fields {
+		orderedFields = append(orderedFields, fieldWithName{name, info})
+	}
+	sort.Slice(orderedFields, func(i, j int) bool {
+		return orderedFields[i].info.Order < orderedFields[j].info.Order
+	})
+
+	keys := make([]string, len(orderedFields))
+	for i, field := range orderedFields {
+		keys[i] = field.name
+	}
+
 	allFieldsFormat := buildFormat(fields, keys, false, useBasename)
-	fmt.Println("\n1. 📝 All Fields Format (Alphabetically Ordered):")
+	fmt.Println("\n1. 📝 All Fields Format (Original Order):")
 	fmt.Printf("   %s\n", color.GreenString(allFieldsFormat))
 
 	// 2. Show fields in recommended order
