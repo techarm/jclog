@@ -8,7 +8,7 @@ import (
 )
 
 // Version information
-const VERSION = "0.1.1"
+const VERSION = "v0.2.10"
 
 // NewVersionCommand defines the `--version` flag behavior
 func NewVersionCommand() *cli.Command {
