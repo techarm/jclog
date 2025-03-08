@@ -2,8 +2,8 @@ name: Update Version
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -20,10 +20,11 @@ jobs:
           
       - name: Update version.go
         run: |
-          VERSION=v0.2.10
+          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           sed -i "s/const VERSION = \".*\"/const VERSION = \"$VERSION\"/" cmd/version.go
           
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          message: "chore: update version to ${{ github.ref_name }}"
