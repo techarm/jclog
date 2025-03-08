@@ -22,9 +22,18 @@ jobs:
         run: |
           VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           sed -i "s/const VERSION = \".*\"/const VERSION = \"$VERSION\"/" cmd/version.go
-          
+
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           message: "chore: update version to ${{ github.ref_name }}"
+
+      - name: Move tag to new commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git tag -d ${{ github.ref_name }}
+          git push origin :refs/tags/${{ github.ref_name }}
+          git tag ${{ github.ref_name }}
+          git push origin ${{ github.ref_name }}
