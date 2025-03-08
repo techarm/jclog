@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/techarm/jclog/internal/formatter"
@@ -24,7 +25,7 @@ var FieldAliases = map[string][]string{
 var fieldPattern = regexp.MustCompile(`{([^}]+)}`)
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string, autoConvertLevel bool) {
+func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string, autoConvertLevel bool, timeFormat string) {
 	// Extract fields from format string
 	fields := extractFields(format)
 
@@ -60,6 +61,12 @@ func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing
 			// Apply modifiers
 			if modifier == "basename" && fieldName == "file" {
 				value = filepath.Base(value)
+			}
+			// Format time fields
+			if (fieldName == "time" || fieldName == "timestamp") && timeFormat != "" {
+				if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
+					value = t.Format(timeFormat)
+				}
 			}
 			extractedFields[field] = value
 		}

@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
+	"github.com/techarm/jclog/internal/config"
 	"github.com/techarm/jclog/internal/logparser"
 	"github.com/urfave/cli/v3"
 )
@@ -90,6 +92,13 @@ func NewInspectCommand() *cli.Command {
 				return fmt.Errorf("log file path is required")
 			}
 
+			// Load configuration
+			cfg, err := config.LoadConfig(config.GetDefaultConfigPath())
+			if err != nil {
+				return fmt.Errorf("failed to load config: %v", err)
+			}
+			activeProfile := cfg.GetActiveProfile()
+
 			filePath := cmd.Args().Get(0)
 			file, err := os.Open(filePath)
 			if err != nil {
@@ -114,9 +123,16 @@ func NewInspectCommand() *cli.Command {
 			for i, key := range orderedData.fieldOrder {
 				value := orderedData.fields[key]
 				example := fmt.Sprintf("%v", value)
+
+				// Handle special cases
 				if cmd.Bool("basename") && key == "file" {
 					example = filepath.Base(example)
+				} else if key == "time" || key == "timestamp" {
+					if t, err := time.Parse(time.RFC3339Nano, example); err == nil {
+						example = t.Format(activeProfile.TimeFormat)
+					}
 				}
+
 				fields[key] = fieldInfo{
 					Type:    fmt.Sprintf("%T", value),
 					Example: example,

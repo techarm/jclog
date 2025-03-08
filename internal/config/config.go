@@ -23,6 +23,7 @@ type Profile struct {
 	Excludes         []string          `json:"excludes"`
 	LevelMappings    map[string]string `json:"level_mappings"`
 	AutoConvertLevel bool              `json:"auto_convert_level"`
+	TimeFormat       string            `json:"time_format"`
 }
 
 // DefaultConfig creates a new configuration with default values
@@ -37,6 +38,7 @@ func DefaultConfig() *Config {
 				Filters:          []string{},
 				Excludes:         []string{},
 				AutoConvertLevel: false,
+				TimeFormat:       "2006/01/02 15:04:05.000",
 				LevelMappings: map[string]string{
 					"10": "TRACE",
 					"20": "DEBUG",

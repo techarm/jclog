@@ -151,7 +151,7 @@ func NewRootCommand() *cli.Command {
 			}
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes, activeProfile.LevelMappings, autoConvertLevel)
+			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes, activeProfile.LevelMappings, autoConvertLevel, activeProfile.TimeFormat)
 			return nil
 		},
 	}
