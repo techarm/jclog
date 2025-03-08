@@ -140,7 +140,7 @@ func NewRootCommand() *cli.Command {
 			}
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes)
+			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes, activeProfile.LevelMappings)
 			return nil
 		},
 	}

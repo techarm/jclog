@@ -23,7 +23,7 @@ var FieldAliases = map[string][]string{
 var fieldPattern = regexp.MustCompile(`{([^}]+)}`)
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string) {
+func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string) {
 	// Extract fields from format string
 	fields := extractFields(format)
 
@@ -38,7 +38,14 @@ func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing
 		// Extract fields
 		extractedFields := make(map[string]string)
 		for _, field := range fields {
-			extractedFields[field] = getFieldValue(raw, field)
+			value := getFieldValue(raw, field)
+			// Apply level mappings if available
+			if field == "level" && levelMappings != nil {
+				if mapped, ok := levelMappings[value]; ok {
+					value = mapped
+				}
+			}
+			extractedFields[field] = value
 		}
 
 		// Handle nested message fields dynamically

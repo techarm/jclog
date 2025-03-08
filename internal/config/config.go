@@ -15,26 +15,41 @@ type Config struct {
 
 // Profile represents a single configuration profile
 type Profile struct {
-	Format      string   `json:"format"`
-	Fields      []string `json:"fields"`
-	MaxDepth    int      `json:"max_depth"`
-	HideMissing bool     `json:"hide_missing"`
-	Filters     []string `json:"filters"`
-	Excludes    []string `json:"excludes"`
+	Format        string            `json:"format"`
+	Fields        []string          `json:"fields"`
+	MaxDepth      int               `json:"max_depth"`
+	HideMissing   bool              `json:"hide_missing"`
+	Filters       []string          `json:"filters"`
+	Excludes      []string          `json:"excludes"`
+	LevelMappings map[string]string `json:"level_mappings"`
 }
 
-// DefaultConfig returns a configuration with default values
+// DefaultConfig creates a new configuration with default values
 func DefaultConfig() *Config {
 	return &Config{
 		ActiveProfile: "default",
 		Profiles: map[string]Profile{
 			"default": {
-				Format:      "",
-				Fields:      []string{},
+				Format:      "{time} [{level}] {msg}",
 				MaxDepth:    2,
 				HideMissing: false,
 				Filters:     []string{},
 				Excludes:    []string{},
+			},
+			"bunyan": {
+				Format:      "{time} [{level}] {msg} ({name}/{pid})",
+				MaxDepth:    2,
+				HideMissing: false,
+				Filters:     []string{},
+				Excludes:    []string{},
+				LevelMappings: map[string]string{
+					"60": "FATAL",
+					"50": "ERROR",
+					"40": "WARN",
+					"30": "INFO",
+					"20": "DEBUG",
+					"10": "TRACE",
+				},
 			},
 		},
 	}

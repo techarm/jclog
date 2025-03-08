@@ -11,74 +11,89 @@ import (
 
 func TestProcessLog(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      string
-		format     string
-		maxDepth   int
-		filters    map[string]string
-		excludes   map[string]string
-		wantOutput bool // whether output is expected
+		name          string
+		input         string
+		format        string
+		maxDepth      int
+		filters       map[string]string
+		excludes      map[string]string
+		levelMappings map[string]string
+		wantOutput    bool
 	}{
 		{
-			name:       "Basic JSON log",
-			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:     "{timestamp} [{level}] {message}",
-			maxDepth:   2,
-			filters:    map[string]string{},
-			excludes:   map[string]string{},
-			wantOutput: true,
+			name:          "Basic JSON log",
+			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			format:        "{timestamp} [{level}] {message}",
+			maxDepth:      2,
+			filters:       map[string]string{},
+			excludes:      map[string]string{},
+			levelMappings: nil,
+			wantOutput:    true,
 		},
 		{
-			name:       "Invalid JSON",
-			input:      "invalid json",
-			format:     "{timestamp} [{level}] {message}",
-			maxDepth:   2,
-			filters:    map[string]string{},
-			excludes:   map[string]string{},
-			wantOutput: true, // will output error message
+			name:          "Invalid JSON",
+			input:         "invalid json",
+			format:        "{timestamp} [{level}] {message}",
+			maxDepth:      2,
+			filters:       map[string]string{},
+			excludes:      map[string]string{},
+			levelMappings: nil,
+			wantOutput:    true, // will output error message
 		},
 		{
-			name:       "Log with filter",
-			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:     "{timestamp} [{level}] {message}",
-			maxDepth:   2,
-			filters:    map[string]string{"level": "INFO"},
-			excludes:   map[string]string{},
-			wantOutput: true,
+			name:          "Log with filter",
+			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			format:        "{timestamp} [{level}] {message}",
+			maxDepth:      2,
+			filters:       map[string]string{"level": "INFO"},
+			excludes:      map[string]string{},
+			levelMappings: nil,
+			wantOutput:    true,
 		},
 		{
-			name:       "Log with exclude",
-			input:      `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
-			format:     "{timestamp} [{level}] {message}",
-			maxDepth:   2,
-			filters:    map[string]string{},
-			excludes:   map[string]string{"level": "DEBUG"},
-			wantOutput: false,
+			name:          "Log with exclude",
+			input:         `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
+			format:        "{timestamp} [{level}] {message}",
+			maxDepth:      2,
+			filters:       map[string]string{},
+			excludes:      map[string]string{"level": "DEBUG"},
+			levelMappings: nil,
+			wantOutput:    false,
 		},
 		{
-			name:       "Nested message",
-			input:      `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
-			format:     "{timestamp} [{level}] {message.nested}",
-			maxDepth:   2,
-			filters:    map[string]string{},
-			excludes:   map[string]string{},
+			name:          "Nested message",
+			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
+			format:        "{timestamp} [{level}] {message.nested}",
+			maxDepth:      2,
+			filters:       map[string]string{},
+			excludes:      map[string]string{},
+			levelMappings: nil,
+			wantOutput:    true,
+		},
+		{
+			name:     "Bunyan log with level mapping",
+			input:    `{"time": "2024-03-20", "level": 30, "msg": "test message"}`,
+			format:   "{time} [{level}] {msg}",
+			maxDepth: 2,
+			filters:  map[string]string{},
+			excludes: map[string]string{},
+			levelMappings: map[string]string{
+				"30": "INFO",
+				"40": "WARN",
+				"50": "ERROR",
+			},
 			wantOutput: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original stdout
-			oldStdout := os.Stdout
+			// Capture stdout
+			old := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			// Process log
-			reader := strings.NewReader(tt.input)
-			scanner := bufio.NewScanner(reader)
-			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes)
-
-			// Copy output in background
+			// Create output capture goroutine
 			outC := make(chan string)
 			go func() {
 				var buf bytes.Buffer
@@ -86,14 +101,17 @@ func TestProcessLog(t *testing.T) {
 				outC <- buf.String()
 			}()
 
-			// Close write end of pipe
+			// Process log
+			reader := strings.NewReader(tt.input)
+			scanner := bufio.NewScanner(reader)
+			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes, tt.levelMappings)
+
+			// Close write end of pipe and read output
 			w.Close()
-
-			// Restore stdout
-			os.Stdout = oldStdout
-
-			// Read output
 			out := <-outC
+
+			// Cleanup and restore stdout
+			os.Stdout = old
 
 			if tt.wantOutput && out == "" {
 				t.Errorf("Expected output but got none")
