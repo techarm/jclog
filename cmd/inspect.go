@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -14,11 +15,29 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// Default field order for log output
+var defaultFieldOrder = []string{
+	"time", "level", "http_code", "http_method", "uri", "route", "pid",
+	"target", "file", "line", "message", "error",
+}
+
+// Suggested fields for common use cases
+var suggestedFields = []string{
+	"time", "level", "http_code", "http_method", "uri", "file", "line", "message", "error",
+}
+
 // NewInspectCommand creates a new inspect command
 func NewInspectCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "inspect",
 		Usage: "Analyze log file and show available fields",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "basename",
+				Aliases: []string{"b"},
+				Usage:   "Show only the base name of file paths",
+			},
+		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			if cmd.Args().Len() == 0 {
 				return fmt.Errorf("log file path is required")
@@ -46,15 +65,23 @@ func NewInspectCommand() *cli.Command {
 			// Get all fields
 			fields := make(map[string]fieldInfo)
 			for key, value := range data {
+				example := fmt.Sprintf("%v", value)
+				if cmd.Bool("basename") && key == "file" {
+					example = filepath.Base(example)
+				}
 				fields[key] = fieldInfo{
 					Type:    fmt.Sprintf("%T", value),
-					Example: fmt.Sprintf("%v", value),
+					Example: example,
 				}
 			}
 
 			// Print field information
-			fmt.Println("Available Fields:")
+			fmt.Println("📋 Available Fields:")
 			printFields(fields)
+
+			// Print format suggestions
+			fmt.Println("\n🎨 Format Suggestions:")
+			printSuggestedFormats(fields, cmd.Bool("basename"))
 
 			return nil
 		},
@@ -100,6 +127,64 @@ func printFields(fields map[string]fieldInfo) {
 		fmt.Printf("%s Type: %s\n", valuePrefix, info.Type)
 		fmt.Printf("%s Example: %s\n", valuePrefix, color.YellowString("%q", info.Example))
 	}
+}
+
+func printSuggestedFormats(fields map[string]fieldInfo, useBasename bool) {
+	// 1. Show all fields in alphabetical order
+	keys := make([]string, 0, len(fields))
+	for k := range fields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	allFieldsFormat := buildFormat(fields, keys, false, useBasename)
+	fmt.Println("\n1. 📝 All Fields Format (Alphabetically Ordered):")
+	fmt.Printf("   %s\n", color.GreenString(allFieldsFormat))
+
+	// 2. Show fields in recommended order
+	recommendedFormat := buildFormat(fields, defaultFieldOrder, false, useBasename)
+	fmt.Println("\n2. ⭐ Recommended Format (Default Order):")
+	fmt.Printf("   %s\n", color.GreenString(recommendedFormat))
+
+	// 3. Show suggested fields
+	suggestedFormat := buildFormat(fields, suggestedFields, false, useBasename)
+	fmt.Println("\n3. 💡 Suggested Format (Common Fields):")
+	fmt.Printf("   %s\n", color.GreenString(suggestedFormat))
+
+	// 4. Help tip
+	fmt.Println("\n💪 Tip: Feel free to customize your format by removing or reordering fields from Format 1 above.")
+}
+
+func buildFormat(fields map[string]fieldInfo, fieldOrder []string, includeExtra bool, useBasename bool) string {
+	parts := []string{}
+	usedFields := make(map[string]bool)
+
+	// Add ordered fields first
+	for _, field := range fieldOrder {
+		if _, exists := fields[field]; exists {
+			if field == "level" {
+				parts = append(parts, "[{level}]")
+			} else if field == "http_code" {
+				parts = append(parts, "[{http_code}]")
+			} else if field == "file" && useBasename {
+				parts = append(parts, "{file|basename}")
+			} else {
+				parts = append(parts, "{"+field+"}")
+			}
+			usedFields[field] = true
+		}
+	}
+
+	// Add remaining fields if includeExtra is true
+	if includeExtra {
+		for field := range fields {
+			if !usedFields[field] {
+				parts = append(parts, "{"+field+"}")
+				usedFields[field] = true
+			}
+		}
+	}
+
+	return strings.Join(parts, " ")
 }
 
 // getAliases returns the aliases for a given field

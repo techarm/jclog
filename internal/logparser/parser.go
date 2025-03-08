@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -38,12 +39,27 @@ func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing
 		// Extract fields
 		extractedFields := make(map[string]string)
 		for _, field := range fields {
-			value := getFieldValue(raw, field)
+			// Check if field has a modifier
+			fieldName := field
+			modifier := ""
+			if strings.Contains(field, "|") {
+				parts := strings.Split(field, "|")
+				fieldName = parts[0]
+				if len(parts) > 1 {
+					modifier = parts[1]
+				}
+			}
+
+			value := getFieldValue(raw, fieldName)
 			// Apply level mappings if available
-			if field == "level" && autoConvertLevel && levelMappings != nil {
+			if fieldName == "level" && autoConvertLevel && levelMappings != nil {
 				if mapped, ok := levelMappings[value]; ok {
 					value = mapped
 				}
+			}
+			// Apply modifiers
+			if modifier == "basename" && fieldName == "file" {
+				value = filepath.Base(value)
 			}
 			extractedFields[field] = value
 		}
