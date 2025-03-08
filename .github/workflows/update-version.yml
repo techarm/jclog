@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   update-version:
     name: Update Version
@@ -17,7 +20,7 @@ jobs:
           
       - name: Update version.go
         run: |
-          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          VERSION=v0.2.10
           sed -i "s/const VERSION = \".*\"/const VERSION = \"$VERSION\"/" cmd/version.go
           
       - name: Commit & Push changes
