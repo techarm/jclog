@@ -27,7 +27,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add cmd/version.go
           git commit -m "chore: update version to ${{ github.ref_name }}"
-          git push
+          git push origin main
 
   build-and-release:
     needs: update-version
