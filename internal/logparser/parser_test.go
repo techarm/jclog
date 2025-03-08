@@ -11,64 +11,70 @@ import (
 
 func TestProcessLog(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         string
-		format        string
-		maxDepth      int
-		filters       map[string]string
-		excludes      map[string]string
-		levelMappings map[string]string
-		wantOutput    bool
+		name             string
+		input            string
+		format           string
+		maxDepth         int
+		filters          map[string]string
+		excludes         map[string]string
+		levelMappings    map[string]string
+		autoConvertLevel bool
+		wantOutput       bool
 	}{
 		{
-			name:          "Basic JSON log",
-			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:        "{timestamp} [{level}] {message}",
-			maxDepth:      2,
-			filters:       map[string]string{},
-			excludes:      map[string]string{},
-			levelMappings: nil,
-			wantOutput:    true,
+			name:             "Basic JSON log",
+			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			format:           "{timestamp} [{level}] {message}",
+			maxDepth:         2,
+			filters:          map[string]string{},
+			excludes:         map[string]string{},
+			levelMappings:    nil,
+			autoConvertLevel: false,
+			wantOutput:       true,
 		},
 		{
-			name:          "Invalid JSON",
-			input:         "invalid json",
-			format:        "{timestamp} [{level}] {message}",
-			maxDepth:      2,
-			filters:       map[string]string{},
-			excludes:      map[string]string{},
-			levelMappings: nil,
-			wantOutput:    true, // will output error message
+			name:             "Invalid JSON",
+			input:            "invalid json",
+			format:           "{timestamp} [{level}] {message}",
+			maxDepth:         2,
+			filters:          map[string]string{},
+			excludes:         map[string]string{},
+			levelMappings:    nil,
+			autoConvertLevel: false,
+			wantOutput:       true, // will output error message
 		},
 		{
-			name:          "Log with filter",
-			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
-			format:        "{timestamp} [{level}] {message}",
-			maxDepth:      2,
-			filters:       map[string]string{"level": "INFO"},
-			excludes:      map[string]string{},
-			levelMappings: nil,
-			wantOutput:    true,
+			name:             "Log with filter",
+			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "test message"}`,
+			format:           "{timestamp} [{level}] {message}",
+			maxDepth:         2,
+			filters:          map[string]string{"level": "INFO"},
+			excludes:         map[string]string{},
+			levelMappings:    nil,
+			autoConvertLevel: false,
+			wantOutput:       true,
 		},
 		{
-			name:          "Log with exclude",
-			input:         `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
-			format:        "{timestamp} [{level}] {message}",
-			maxDepth:      2,
-			filters:       map[string]string{},
-			excludes:      map[string]string{"level": "DEBUG"},
-			levelMappings: nil,
-			wantOutput:    false,
+			name:             "Log with exclude",
+			input:            `{"timestamp": "2024-03-20", "level": "DEBUG", "message": "test message"}`,
+			format:           "{timestamp} [{level}] {message}",
+			maxDepth:         2,
+			filters:          map[string]string{},
+			excludes:         map[string]string{"level": "DEBUG"},
+			levelMappings:    nil,
+			autoConvertLevel: false,
+			wantOutput:       false,
 		},
 		{
-			name:          "Nested message",
-			input:         `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
-			format:        "{timestamp} [{level}] {message.nested}",
-			maxDepth:      2,
-			filters:       map[string]string{},
-			excludes:      map[string]string{},
-			levelMappings: nil,
-			wantOutput:    true,
+			name:             "Nested message",
+			input:            `{"timestamp": "2024-03-20", "level": "INFO", "message": "{\"nested\": \"value\"}"}`,
+			format:           "{timestamp} [{level}] {message.nested}",
+			maxDepth:         2,
+			filters:          map[string]string{},
+			excludes:         map[string]string{},
+			levelMappings:    nil,
+			autoConvertLevel: false,
+			wantOutput:       true,
 		},
 		{
 			name:     "Bunyan log with level mapping",
@@ -82,7 +88,8 @@ func TestProcessLog(t *testing.T) {
 				"40": "WARN",
 				"50": "ERROR",
 			},
-			wantOutput: true,
+			autoConvertLevel: true,
+			wantOutput:       true,
 		},
 	}
 
@@ -104,7 +111,7 @@ func TestProcessLog(t *testing.T) {
 			// Process log
 			reader := strings.NewReader(tt.input)
 			scanner := bufio.NewScanner(reader)
-			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes, tt.levelMappings)
+			ProcessLog(scanner, tt.format, tt.maxDepth, false, tt.filters, tt.excludes, tt.levelMappings, tt.autoConvertLevel)
 
 			// Close write end of pipe and read output
 			w.Close()

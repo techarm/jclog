@@ -23,7 +23,7 @@ var FieldAliases = map[string][]string{
 var fieldPattern = regexp.MustCompile(`{([^}]+)}`)
 
 // ProcessLog parses JSON logs and outputs formatted results
-func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string) {
+func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing bool, filters map[string]string, excludes map[string]string, levelMappings map[string]string, autoConvertLevel bool) {
 	// Extract fields from format string
 	fields := extractFields(format)
 
@@ -40,7 +40,7 @@ func ProcessLog(scanner *bufio.Scanner, format string, maxDepth int, hideMissing
 		for _, field := range fields {
 			value := getFieldValue(raw, field)
 			// Apply level mappings if available
-			if field == "level" && levelMappings != nil {
+			if field == "level" && autoConvertLevel && levelMappings != nil {
 				if mapped, ok := levelMappings[value]; ok {
 					value = mapped
 				}
@@ -196,7 +196,16 @@ func getFieldValue(data map[string]any, field string) string {
 			return v
 		}
 		if v, ok := data[alias].(float64); ok {
+			if field == "level" {
+				return fmt.Sprintf("%d", int(v))
+			}
 			return fmt.Sprintf("%.0f", v)
+		}
+		if v, ok := data[alias].(int); ok {
+			if field == "level" {
+				return fmt.Sprintf("%d", v)
+			}
+			return fmt.Sprintf("%d", v)
 		}
 	}
 	return ""

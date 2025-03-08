@@ -13,11 +13,13 @@ var levelColors = map[string]func(a ...any) string{
 	"INFO":  color.New(color.FgGreen).SprintFunc(),
 	"WARN":  color.New(color.FgYellow).SprintFunc(),
 	"ERROR": color.New(color.FgRed).SprintFunc(),
+	"FATAL": color.New(color.FgRed, color.Bold).SprintFunc(),
 }
 
 // ColorizeByLevel applies color to text based on log level
 func ColorizeByLevel(text, level string) string {
 	level = strings.ToUpper(level)
+	// Try to find color by level name
 	if colorFunc, exists := levelColors[level]; exists {
 		return colorFunc(text)
 	}
@@ -38,7 +40,8 @@ func FormatLog(fields map[string]string, format string, fieldOrder []string, hid
 
 		// Apply color based on log level
 		if level, exists := fields["level"]; exists {
-			if colorFunc, exists := levelColors[strings.ToUpper(level)]; exists {
+			level = strings.ToUpper(level)
+			if colorFunc, exists := levelColors[level]; exists {
 				return colorFunc(result)
 			}
 		}
@@ -69,7 +72,8 @@ func FormatLog(fields map[string]string, format string, fieldOrder []string, hid
 
 	// Apply color based on log level
 	if level, exists := fields["level"]; exists {
-		if colorFunc, exists := levelColors[strings.ToUpper(level)]; exists {
+		level = strings.ToUpper(level)
+		if colorFunc, exists := levelColors[level]; exists {
 			return colorFunc(result)
 		}
 	}

@@ -54,6 +54,12 @@ func NewRootCommand() *cli.Command {
 				Usage: "Hide missing fields when --format is specified",
 				Value: false,
 			},
+			&cli.BoolFlag{
+				Name:    "auto-convert-level",
+				Aliases: []string{"c"},
+				Usage:   "Automatically convert numeric log levels to text format",
+				Value:   false,
+			},
 			&cli.StringSliceFlag{
 				Name:  "filter",
 				Usage: "Only show logs that match the specified field=value conditions",
@@ -113,6 +119,11 @@ func NewRootCommand() *cli.Command {
 				hideMissing = activeProfile.HideMissing
 			}
 
+			autoConvertLevel := cmd.Bool("auto-convert-level")
+			if !cmd.IsSet("auto-convert-level") {
+				autoConvertLevel = activeProfile.AutoConvertLevel
+			}
+
 			filters := parseFilterArgs(cmd.StringSlice("filter"))
 			if len(filters) == 0 {
 				filters = parseFilterArgs(activeProfile.Filters)
@@ -140,7 +151,7 @@ func NewRootCommand() *cli.Command {
 			}
 
 			// Process logs
-			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes, activeProfile.LevelMappings)
+			logparser.ProcessLog(scanner, format, maxDepth, hideMissing, filters, excludes, activeProfile.LevelMappings, autoConvertLevel)
 			return nil
 		},
 	}
