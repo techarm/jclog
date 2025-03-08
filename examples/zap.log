@@ -1,0 +1,6 @@
+{"level":"INFO","ts":1647763200,"caller":"app/server.go:42","msg":"Starting application","version":"1.0.0"}
+{"level":"DEBUG","ts":1647763201,"caller":"app/config.go:15","msg":"Loading configuration","config_path":"/etc/app/config.yaml"}
+{"level":"INFO","ts":1647763202,"caller":"app/db.go:31","msg":"Connected to database","db_name":"users","host":"localhost:5432"}
+{"level":"ERROR","ts":1647763203,"caller":"app/handler.go:67","msg":"Failed to process request","error":"invalid input","request_id":"req-456"}
+{"level":"WARN","ts":1647763204,"caller":"app/cache.go:89","msg":"Cache miss","key":"user:123","cache_type":"redis"}
+{"level":"INFO","ts":1647763205,"caller":"app/metrics.go:28","msg":"Metrics collected","cpu_usage":45.2,"memory_mb":1024} 

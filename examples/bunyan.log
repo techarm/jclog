@@ -1,0 +1,6 @@
+{"name":"myapp","hostname":"server1","pid":12345,"level":30,"msg":"Server started","time":"2024-03-20T10:00:00Z","v":0}
+{"name":"myapp","hostname":"server1","pid":12345,"level":20,"msg":"Debug mode enabled","time":"2024-03-20T10:00:01Z","debug":true,"v":0}
+{"name":"myapp","hostname":"server1","pid":12345,"level":30,"msg":"Worker process started","time":"2024-03-20T10:00:02Z","worker_id":1,"v":0}
+{"name":"myapp","hostname":"server1","pid":12345,"level":40,"msg":"High CPU usage","time":"2024-03-20T10:00:03Z","cpu":95,"threshold":80,"v":0}
+{"name":"myapp","hostname":"server1","pid":12345,"level":50,"msg":"Worker crashed","time":"2024-03-20T10:00:04Z","worker_id":1,"error":"segmentation fault","v":0}
+{"name":"myapp","hostname":"server1","pid":12345,"level":30,"msg":"Worker restarted","time":"2024-03-20T10:00:05Z","worker_id":1,"attempt":1,"v":0} 
