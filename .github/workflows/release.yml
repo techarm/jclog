@@ -23,8 +23,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: go-yoshi
           include-component-in-tag: false
-          bump-minor-pre-major: true
-          bump-patch-for-minor-pre-major: true
+          manifest-file: .manifest.json
 
   upload-artifact:
     runs-on: ubuntu-latest
