@@ -1,16 +1,33 @@
-name: Release
+name: release
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  releases-matrix:
-    name: Release Go Binary
+  release-please:
+    timeout-minutes: 1
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          release-type: simple
+
+  upload-artifact:
     runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    timeout-minutes: 5
     strategy:
       matrix:
         goos: [linux, windows, darwin]
