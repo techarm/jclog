@@ -21,8 +21,6 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
-          release-type: simple
 
   upload-artifact:
     runs-on: ubuntu-latest
