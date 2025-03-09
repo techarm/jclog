@@ -41,6 +41,7 @@ jobs:
       - uses: wangyoucao577/go-release-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_tag: ${{ needs.release-please.outputs.tag_name }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           binary_name: "jclog"
