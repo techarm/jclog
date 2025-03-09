@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/techarm/jclog/compare/v0.3.2...v0.3.3) (2025-03-09)
+
+
+### Bug Fixes
+
+* update version ([#10](https://github.com/techarm/jclog/issues/10)) ([bdb2e35](https://github.com/techarm/jclog/commit/bdb2e3557801d58d71b1e1393b3f468fe62883bd))
+
 ## [0.3.2](https://github.com/techarm/jclog/compare/v0.3.1...v0.3.2) (2025-03-09)
 
 
