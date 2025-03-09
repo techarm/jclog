@@ -21,6 +21,10 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: go-yoshi
+          include-component-in-tag: false
+          bump-minor-pre-major: true
+          bump-patch-for-minor-pre-major: true
 
   upload-artifact:
     runs-on: ubuntu-latest
